@@ -23,6 +23,7 @@ class Top extends Module {
   
   val memory = Module(new Memory(Some(i => f"../sw/bootrom_${i}.hex"), baseAddress.U(WORD_LEN.W), memSize))
   val gpio = Module(new Gpio)
+  val uartTx = Module(new UartTx(27000000, 115200))
 
   core.io.imem <> memory.io.imem
   core.io.dmem <> decoder.io.initiator  // CPUにデコーダを接続
@@ -31,8 +32,10 @@ class Top extends Module {
   //io.gpio_out := gpio.io.out  // GPIOの出力を外部ポートに接続
   io.gpio_out := core.io.gpio_out  // GPIO CSRの出力を外部ポートに接続
 
-  val uartTx = Module(new UartTx(27000000, 115200))
+  core.io.uart_cplt := uartTx.io.cplt
   io.uart_tx := uartTx.io.tx
+  uartTx.io.char := core.io.uart_out
+  uartTx.io.wen  := core.io.uart_wen
 
   io.success := core.io.success
   io.exit := core.io.exit

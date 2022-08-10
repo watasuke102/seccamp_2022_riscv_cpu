@@ -11,6 +11,9 @@ class Core(startAddress: UInt = START_ADDR) extends Module {
       val imem = Flipped(new ImemPortIo())
       val dmem = Flipped(new DmemPortIo())
       val gpio_out = Output(UInt(32.W))
+      val uart_cplt = Input(Bool())
+      val uart_out = Output(UInt(32.W))
+      val uart_wen = Output(Bool())
       val success = Output(Bool())
       val exit = Output(Bool())
       val debug_pc = Output(UInt(WORD_LEN.W))
@@ -19,9 +22,14 @@ class Core(startAddress: UInt = START_ADDR) extends Module {
 
   val regfile = Mem(32, UInt(WORD_LEN.W))
   // val csr_regfile = Mem(4096, UInt(WORD_LEN.W)) // 
-  val csr_gpio_out = RegInit(0.U(WORD_LEN.W))   // 
   val csr_trap_vector = RegInit(0.U(WORD_LEN.W))   // 
+  val csr_gpio_out = RegInit(0.U(WORD_LEN.W))   // 
+  val csr_uart_out = RegInit(0x41.U(WORD_LEN.W))   // 
+  val uart_wen = RegInit(false.B)
   io.gpio_out := csr_gpio_out
+  io.uart_out := csr_uart_out
+  io.uart_wen := uart_wen
+  uart_wen := false.B
 
   //**********************************
   // Pipeline State Registers
@@ -308,6 +316,8 @@ class Core(startAddress: UInt = START_ADDR) extends Module {
   // CSR
   val csr_rdata = MuxCase(0.U(WORD_LEN.W), Seq(
     (mem_reg_csr_addr === CSR_CUSTOM_GPIO.U) -> csr_gpio_out,
+    (mem_reg_csr_addr === 0x7c1.U) -> csr_uart_out,
+    (mem_reg_csr_addr === 0x7c2.U) -> io.uart_cplt,
     (mem_reg_csr_addr === CSR_MTVEC.U) -> csr_trap_vector,
   ))
 
@@ -323,6 +333,9 @@ class Core(startAddress: UInt = START_ADDR) extends Module {
       csr_trap_vector := csr_wdata
     } .elsewhen( mem_reg_csr_addr === CSR_CUSTOM_GPIO.U ) {
       csr_gpio_out := csr_wdata
+    } .elsewhen( mem_reg_csr_addr === 0x7c1.U ) {
+      csr_uart_out := csr_wdata
+      uart_wen := true.B
     }
   }
 
@@ -371,19 +384,19 @@ class Core(startAddress: UInt = START_ADDR) extends Module {
   io.success := successDetected
   io.exit := if_inst === ECALL
   io.debug_pc := if_reg_pc
-  printf(p"if_reg_pc        : 0x${Hexadecimal(if_reg_pc)}\n")
-  printf(p"id_reg_pc        : 0x${Hexadecimal(id_reg_pc)}\n")
-  printf(p"id_reg_inst      : 0x${Hexadecimal(id_reg_inst)}\n")
-  printf(p"stall_flg        : 0x${Hexadecimal(stall_flg)}\n")
-  printf(p"id_inst          : 0x${Hexadecimal(id_inst)}\n")
-  printf(p"id_rs1_data      : 0x${Hexadecimal(id_rs1_data)}\n")
-  printf(p"id_rs2_data      : 0x${Hexadecimal(id_rs2_data)}\n")
-  printf(p"exe_reg_pc       : 0x${Hexadecimal(exe_reg_pc)}\n")
-  printf(p"exe_reg_op1_data : 0x${Hexadecimal(exe_reg_op1_data)}\n")
-  printf(p"exe_reg_op2_data : 0x${Hexadecimal(exe_reg_op2_data)}\n")
-  printf(p"exe_alu_out      : 0x${Hexadecimal(exe_alu_out)}\n")
-  printf(p"mem_reg_pc       : 0x${Hexadecimal(mem_reg_pc)}\n")
-  printf(p"mem_wb_data      : 0x${Hexadecimal(mem_wb_data)}\n")
-  printf(p"wb_reg_wb_data   : 0x${Hexadecimal(wb_reg_wb_data)}\n")
-  printf("---------\n")
+  // printf(p"if_reg_pc        : 0x${Hexadecimal(if_reg_pc)}\n")
+  // printf(p"id_reg_pc        : 0x${Hexadecimal(id_reg_pc)}\n")
+  // printf(p"id_reg_inst      : 0x${Hexadecimal(id_reg_inst)}\n")
+  // printf(p"stall_flg        : 0x${Hexadecimal(stall_flg)}\n")
+  // printf(p"id_inst          : 0x${Hexadecimal(id_inst)}\n")
+  // printf(p"id_rs1_data      : 0x${Hexadecimal(id_rs1_data)}\n")
+  // printf(p"id_rs2_data      : 0x${Hexadecimal(id_rs2_data)}\n")
+  // printf(p"exe_reg_pc       : 0x${Hexadecimal(exe_reg_pc)}\n")
+  // printf(p"exe_reg_op1_data : 0x${Hexadecimal(exe_reg_op1_data)}\n")
+  // printf(p"exe_reg_op2_data : 0x${Hexadecimal(exe_reg_op2_data)}\n")
+  // printf(p"exe_alu_out      : 0x${Hexadecimal(exe_alu_out)}\n")
+  // printf(p"mem_reg_pc       : 0x${Hexadecimal(mem_reg_pc)}\n")
+  // printf(p"mem_wb_data      : 0x${Hexadecimal(mem_wb_data)}\n")
+  // printf(p"wb_reg_wb_data   : 0x${Hexadecimal(wb_reg_wb_data)}\n")
+  // printf("---------\n")
 }
