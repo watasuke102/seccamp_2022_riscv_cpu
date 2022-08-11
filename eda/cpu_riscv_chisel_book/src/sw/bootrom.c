@@ -14,15 +14,27 @@ extern void __attribute__((naked)) _start(void) {
   main();
 }
 
-static uint64_t write_gpio_csr(uint32_t value) {
-  asm volatile("csrw 0x7c0, %0" ::"r"(value));
+static uint64_t read_cycle(void) {
+  uint32_t l, h, hv;
+  do {
+    asm volatile("rdcycleh %0" : "=r"(h));
+    asm volatile("rdcycle  %0" : "=r"(l));
+    asm volatile("rdcycleh %0" : "=r"(hv));
+  } while (h != hv);
+  return ((uint64_t)h << 32) | l;
 }
+static void delay_us(uint32_t duration_us) {
+  uint64_t cycles = duration_us * 27;
+  uint64_t start = read_cycle();
+  while (read_cycle() - start < cycles)
+    ;
+  ;
+}
+static void delay_ms(uint32_t duration_ms) { delay_us(duration_ms * 1000); }
 
 static volatile uint32_t* const REG_GPIO_OUT = (volatile uint32_t*)0xA0000000;
-static void delay_us(uint32_t duration_us) {
-  uint64_t cycles = duration_us * 2;
-  for (volatile int i = 0; i < cycles; ++i)
-    ;
+static uint64_t write_gpio_csr(uint32_t value) {
+  asm volatile("csrw 0x7c0, %0" ::"r"(value));
 }
 
 // LCD
@@ -59,9 +71,9 @@ static void lcd_write(bool is_data, uint8_t data) {
 
 static void lcd_init() {
   lcd_set_rs(0);
-  delay_us(500000);
+  delay_ms(500);
   lcd_write_half(0x03);
-  delay_us(41000);
+  delay_ms(41);
   lcd_write_half(0x03);
   delay_us(100);
   lcd_write_half(0x03);
@@ -70,7 +82,7 @@ static void lcd_init() {
   lcd_write(false, 0x28);  // 2 rows, 8 lines
   delay_us(37);
   lcd_write(false, 0x01);  // clear
-  delay_us(20000);
+  delay_ms(20);
   lcd_write(false, 0x06);  // entry mode set
   delay_us(37);
   lcd_write(false, 0x0f);  // show char / under line cursor / block cursor
@@ -86,6 +98,6 @@ void __attribute__((noreturn)) main(void) {
     *REG_GPIO_OUT = led_out;
     write_gpio_csr(led_out);
     led_out = (led_out << 1) | ((led_out >> 5) & 1);
-    delay_us(500000);
+    delay_ms(500);
   }
 }

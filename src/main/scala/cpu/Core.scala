@@ -21,7 +21,9 @@ class Core(startAddress: UInt = START_ADDR) extends Module {
   // val csr_regfile = Mem(4096, UInt(WORD_LEN.W)) // 
   val csr_gpio_out = RegInit(0.U(WORD_LEN.W))   // 
   val csr_trap_vector = RegInit(0.U(WORD_LEN.W))   // 
+  val cycle_counter = RegInit(0.U(64.W))
   io.gpio_out := csr_gpio_out
+  cycle_counter := cycle_counter + 1.U
 
   //**********************************
   // Pipeline State Registers
@@ -309,6 +311,8 @@ class Core(startAddress: UInt = START_ADDR) extends Module {
   val csr_rdata = MuxCase(0.U(WORD_LEN.W), Seq(
     (mem_reg_csr_addr === CSR_CUSTOM_GPIO.U) -> csr_gpio_out,
     (mem_reg_csr_addr === CSR_MTVEC.U) -> csr_trap_vector,
+    (mem_reg_csr_addr === CSR_ADDR_CYCLE) -> cycle_counter(31, 0),
+    (mem_reg_csr_addr === CSR_ADDR_CYCLEH) -> cycle_counter(63, 32),
   ))
 
   val csr_wdata = MuxCase(0.U(WORD_LEN.W), Seq(
