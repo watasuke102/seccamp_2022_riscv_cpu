@@ -40,14 +40,20 @@ class VideoController(videoParams: VideoParams, vramPixelBits: Int, magnificatio
     val hSyncReg = RegInit(0.U(2.W))
     val vSyncReg = RegInit(0.U(2.W))
     val dataEnableReg = RegInit(0.U(2.W))
+    val colorPalette = Reg(Vec(16, UInt(32.W)))
     // CDC用レジスタのビット幅分のFFで、CPUクロックに同期する
     hSyncReg := Cat(io.video.hSync, hSyncReg(hSyncReg.getWidth-1, 1))
     vSyncReg := Cat(io.video.vSync, vSyncReg(vSyncReg.getWidth-1, 1))
     dataEnableReg := Cat(io.video.dataEnable, dataEnableReg(dataEnableReg.getWidth-1, 1))
+    val addr = io.reg.addr(9, 2)
     io.reg.rdata := MuxCase("xdeadbeef".U, Seq(
         // VSYNC, HSYNC, DEをCPUから読み取れるようにしておく
-        (io.reg.addr(2, 2) === 0.U) -> Cat(0.U(29.W), vSyncReg(0), hSyncReg(0), dataEnableReg(0)),
+        (addr === 0.U) -> Cat(0.U(29.W), vSyncReg(0), hSyncReg(0), dataEnableReg(0)),
+        (addr >= 0x10.U && addr <= 0xf0.U) -> colorPalette(io.reg.addr(10, 2))
     ))
+    when(io.reg.wen && addr >= 0x10.U && addr <= 0xf0.U ) {
+        colorPalette(addr) := io.reg.wdata
+    }
 
     // ビデオクロックで動く部分
     withClockAndReset(io.videoClock, io.videoReset) {
@@ -98,7 +104,12 @@ class VideoController(videoParams: VideoParams, vramPixelBits: Int, magnificatio
                 magnificationCounterH := magnificationCounterH + 1.U
             }
             // VRAMのピクセルフォーマットから、24bpp BGRのピクセルフォーマットに変換する
-            data := pixelTranslation(RegNext(vram(pixelAddress), 0.U))
+            val color = colorPalette(RegNext(vram(pixelAddress), 0.U))
+            data := Cat(
+                color( 7,  0), 
+                color(15,  8), 
+                color(23, 16), 
+            )
         }
         when(activeVLower <= counterV && counterV < activeVUpper && endOfLine) {
             when(magnificationCounterV === (magnificationRateV - 1).U) {
