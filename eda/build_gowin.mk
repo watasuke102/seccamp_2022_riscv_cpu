@@ -22,7 +22,7 @@ PROJECT_ADDITIONAL_CLEAN ?=
 all: synthesis
 
 $(BITSTREAM): $(SRCS)
-	mkdir -p build/$(TARGET) && cd build/$(TARGET) && gw_sh ../../project.tcl $(SRC_DIR) $(RTL_DIR) $(TARGET) $(DEVICE_FAMILY) $(DEVICE_PART) $(PROJECT_NAME) $(PROJECT_ADDITIONAL_ARGS)
+	mkdir -p build/$(TARGET) && cd build/$(TARGET)
 
 synthesis: $(BITSTREAM)
 

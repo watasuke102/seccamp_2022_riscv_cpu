@@ -39,10 +39,6 @@ module top(
 assign row = '1;
 //assign d = 8'b0000_1111;
 assign seven_seg = 0;
-assign lcd_rs = 0;
-assign lcd_rw = 0;
-assign lcd_e = 0;
-assign lcd_db = 0;
 assign debug_out = 0;
 
 // Reset sequencer.
@@ -88,6 +84,10 @@ assign cpu_clock = clock && !cpu_halt;
 Top core(
   .clock(cpu_clock),
   .io_uart_tx(uart_tx),
+  .io_lcd_rs(lcd_rs),
+  .io_lcd_rw(lcd_rw),
+  .io_lcd_e(lcd_e),
+  .io_lcd_db(lcd_db),
   .*
 );
 

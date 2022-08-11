@@ -60,7 +60,7 @@ class Memory(memoryPath: Option[Int => String], baseAddress: UInt = "x80000000".
     dmemAddrReg := io.dmem.addr
   }
   when( rvalid ) {
-    printf(p"Data read address=0x${Hexadecimal(dmemAddrReg)} data=0x${Hexadecimal(rdata)}\n")
+    // printf(p"Data read address=0x${Hexadecimal(dmemAddrReg)} data=0x${Hexadecimal(rdata)}\n")
   }
   when(io.dmem.wen){
     for(i <- 0 to 3) {
